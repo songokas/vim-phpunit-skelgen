@@ -1,0 +1,22 @@
+Vim Plugin PHPUnit Skeleton Generator
+
+this plugin allows you generate tests from existing classes
+
+INSTALL
+-------
+
+just copy 'phpunit-skelgen.vim' to your '$HOME/.vim/plugins' directry
+
+
+USAGE
+------
+
+:PhpGenSkel
+
+generate test file for current file in g:phpunit_testroot/current_path/fileName + Test.php
+
+
+TODO
+------
+
+ * Generate class from test file
