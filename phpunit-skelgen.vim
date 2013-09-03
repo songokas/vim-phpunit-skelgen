@@ -9,21 +9,21 @@
 " binary file to run
 "
 if !exists('g:phpunit_skelgen')
-  let g:phpunit_skelgen = 'phpunit-skelgen'
+    let g:phpunit_skelgen = 'phpunit-skelgen'
 endif
 
 "
 " root of unit tests
 "
 if !exists('g:phpunit_testroot')
-  let g:phpunit_testroot = 'tests'
+    let g:phpunit_testroot = 'tests'
 endif
 
 "
 " params to append
 "
 if !exists('g:phpunit_skelgen_params')
-  let g:phpunit_skelgen_params = ''
+    let g:phpunit_skelgen_params = ''
 endif
 
 function! s:PhpSkelGenRun(args)
@@ -45,16 +45,20 @@ function! PhpGenTestSkel()
     let filePath = expand('%')
     let className = expand('%:t:r')
     let testClassName = className . 'Test'
-    let testFileTempPath = g:phpunit_testroot . '/' . filePath "substitute(filePath, getcwd(), getcwd() . g:phpunit_testroot . '/', '')
+    let testFileTempPath = g:phpunit_testroot . '/' . filePath
     let testFilePath = substitute(testFileTempPath, className, testClassName, '')
+    let testFileDir = fnamemodify(testFilePath, ':p:h')
+    if !isdirectory(testFileDir)
+        call mkdir(testFileDir, 'p')
+    endif
     let args = ' --test -- ' . className . ' ' . filePath . ' ' . testClassName . ' ' . testFilePath
     let output = s:PhpSkelGenRun(args)
-    g:PhpSkelGenOutput(output)
+    call s:PhpSkelGenOutput(output, testFilePath)
 endfunction
 
-function! g:PhpSkelGenOutput(output)
-    :echo output
-    execute 'sp ' . testFilePath
+function! s:PhpSkelGenOutput(content, testFilePath)
+    :echo a:content
+    execute 'sp ' . a:testFilePath
 endfunction
 
 
