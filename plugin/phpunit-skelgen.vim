@@ -38,83 +38,82 @@ endfunction
 
 " FUNCTION: PhpUnitSkel.generateTest()   {{{1
 " generate test class for current file
-function! s:PhpUnitSkel.generateTest()
-    let namespace = self.getNamespace()
+function! s:PhpUnitSkel.generateTest(filePath)
+    let namespace = self.getNamespace(a:filePath)
     if !empty(namespace)
         namespace += '\\'
     endif
-    let filePath = expand('%')
-    let className = namespace . expand('%:t:r')
+    let className = namespace . fnamemodify(a:filePath, '%:t:r')
     let testClassName = className . 'Test'
-    let testFileTempPath = self.testDir . '/' . filePath
+    let testFileTempPath = self.testDir . '/' . a:filePath
     let testFilePath = substitute(testFileTempPath, className, testClassName, '')
     let testFileDir = fnamemodify(testFilePath, ':p:h')
     if !isdirectory(testFileDir)
         call mkdir(testFileDir, 'p')
     endif
-    let args = ' --test -- ' . shellescape(className) . ' ' . shellescape(filePath) . ' ' . shellescape(testClassName) . ' ' . shellescape(testFilePath)
+    let args = ' --test -- ' . shellescape(className) . ' ' . shellescape(a:filePath) . ' ' . shellescape(testClassName) . ' ' . shellescape(testFilePath)
     let output = self.run(args)
-    call self.output(output, testFilePath)
+    call PhpUnitSkelGenOutput(output, testFilePath)
 endfunction
 
 " FUNCTION: PhpUnitSkel.generateClass()   {{{1
 " generate class from current test file
-function! s:PhpUnitSkel.generateClass()
-    let namespace = self.getNamespace()
+function! s:PhpUnitSkel.generateClass(testFilePath)
+    let namespace = self.getNamespace(a:testFilePath)
     if !empty(namespace)
         namespace += '\\'
     endif
-    let testFilePath = expand('%')
-    let testClassName = namespace . expand('%:t:r')
+    let testClassName = namespace . fnamemodify(a:testFilePath, '%:t:r')
     let className = matchstr(testClassName,  '\\?\zs.\+\zeTest')
     if empty(className)
         throw 'Not a test file ' . testClassName . '. Test file ends with Test.php'
-    let filePath = matchstr(testFilePath, self.testDir . '/\zs.\+')
+    let filePath = matchstr(a:testFilePath, self.testDir . '/\zs.\+')
     let fileDir = fnamemodify(filePath, ':p:h')
-    let namespace = self.getNamespace()
-    if !empty(namespace)
-        let namespaceString = shellescape(namespace) . ' '
-    else
-        let namespaceString = ''
-    endif
     if !isdirectory(fileDir)
         call mkdir(fileDir, 'p')
     endif
 
-    let args = ' --class -- ' . namespaceString . shellescape(testClassName). ' ' . shellescape(testFilePath). ' ' . shellescape(className) . ' ' . shellescape(filePath)
+    let args = ' --class -- ' . shellescape(testClassName). ' ' . shellescape(a:testFilePath). ' ' . shellescape(className) . ' ' . shellescape(filePath)
     let output = self.run(args)
-    call self.output(output, filePath)
+    call PhpUnitSkelGenOutput(output, filePath)
 endfunction
 
 " FUNCTION: PhpUnitSkel.getNamespace() {{{1
 " returns file namespace
-function! s:PhpUnitSkel.getNamespace()
-    let lineNr = search('^namespace.\+;$', 'n')
-    if !(lineNr > 0)
-        return ""
-    endif
-    let line = getline(lineNr)
+function! s:PhpUnitSkel.getNamespace(filePath)
+    for line in readfile(a:filePath, '', 100)
+        if line =~ '^namespace.\+;$' | break | endif
+	endfor
     let namespace = matchstr(line, 'namespace\s\+\zs.\+\ze;')
     return namespace
 endfunction
 
-" FUNCTION: PhpUnitSkel.output() {{{1
+"===========================================
+
+" FUNCTION: PhpUnitSkelGenOutput() {{{1
 " output the command contents and open a buffer
-function! s:PhpUnitSkel.output(content, filePath)
-    :echo a:content
+" override it if you need something else
+function! PhpUnitSkelGenOutput(content, filePath)
+    echo a:content
     execute 'sp ' . a:filePath
 endfunction
 
 " SECTION: Commands {{{1
 "===========================================
-"
-function! PhpGenSkel()
-    let is_test = expand('%:t') =~ 'Test\.'
+
+
+" FUNCTION: PhpGenSkel() {{{1
+" generate skeleton for current file
+" if current file is a class a test file will be created
+" if current file is a test class a class file will be created
+function! PhpGenSkel(filePath)
+    let realFilePath = !empty(a:filePath) ? a:filePath : expand('%')
+    let is_test = fnamemodify(realFilePath, '%:t') =~ 'Test\.'
     try
         if is_test
-            call s:PhpUnitSkel.generateClass()
+            call s:PhpUnitSkel.generateClass(realFilePath)
         else
-            call s:PhpUnitSkel.generateTest()
+            call s:PhpUnitSkel.generateTest(realFilePath)
         endif
     catch
        echo 'Error: ' . v:exception
@@ -122,7 +121,7 @@ function! PhpGenSkel()
 endfunction
 
 
-command! PhpGenSkel call PhpGenSkel()
+command! -nargs=? -complete=file PhpGenSkel call PhpGenSkel(<args>)
 
 if !exists('g:phpunit_skelgen_key_map') || !g:phpunit_skelgen_key_map
     autocmd FileType php nnoremap <Leader>gs :PhpGenSkel<Enter>
