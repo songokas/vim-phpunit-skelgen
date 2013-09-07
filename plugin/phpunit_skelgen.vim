@@ -11,7 +11,7 @@ if !exists('g:phpunit_skelgen')
     let g:phpunit_skelgen = 'phpunit-skelgen'
 endif
 
-" root of unit tests
+" root of unit tests (relative to your working directory)
 if !exists('g:phpunit_testroot')
     let g:phpunit_testroot = 'tests'
 endif
@@ -23,6 +23,7 @@ endif
 
 "CLASS: PhpUnitSkel
 "============================================================
+
 let s:PhpUnitSkel = {}
 let s:PhpUnitSkel.bin = g:phpunit_skelgen
 let s:PhpUnitSkel.testDir = g:phpunit_testroot
@@ -88,6 +89,15 @@ function! s:PhpUnitSkel.getNamespace(filePath)
     return namespace
 endfunction
 
+" FUNCTION: PhpUnitSkel.validCwd
+" check if current working dir contains tests directory
+function! s:PhpUnitSkel.validCwd()
+    let currentDir = fnamemodify(getcwd() . '/' . self.testDir, '%')
+    if !is_directory(currentDir)
+        throw 'Current working directory ' . getcwd() . ' does not have directory ' . self.testDir
+    endif
+endfunction
+
 "===========================================
 
 " FUNCTION: PhpUnitSkelGenOutput() {{{1
@@ -107,9 +117,10 @@ endfunction
 " if current file is a class a test file will be created
 " if current file is a test class a class file will be created
 function! PhpGenSkel(filePath)
-    let realFilePath = !empty(a:filePath) ? a:filePath : expand('%')
-    let is_test = fnamemodify(realFilePath, '%:t') =~ 'Test\.'
     try
+        call s:PhpUnitSkel.validCwd()
+        let realFilePath = !empty(a:filePath) ? a:filePath : expand('%')
+        let is_test = fnamemodify(realFilePath, '%:t') =~ 'Test\.'
         if is_test
             call s:PhpUnitSkel.generateClass(realFilePath)
         else
@@ -126,3 +137,16 @@ command! -nargs=? -complete=file PhpGenSkel call PhpGenSkel(<args>)
 if !exists('g:phpunit_skelgen_key_map') || !g:phpunit_skelgen_key_map
     autocmd FileType php nnoremap <Leader>gs :PhpGenSkel<Enter>
 endif
+
+"===========================================================
+" UNITTEST:
+function! phpunit_skelgen#__context__()
+  return { 'sid': s:SID, 'scope': s: }
+endfunction
+
+function! s:get_SID()
+  return matchstr(expand('<sfile>'), '<SNR>\d\+_')
+endfunction
+let s:SID = s:get_SID()
+delfunction s:get_SID
+
