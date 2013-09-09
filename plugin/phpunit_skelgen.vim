@@ -48,11 +48,11 @@ endfunction
 function! s:PhpUnitSkel.generateTest(filePath)
     let className = self.getClass(a:filePath)
     let testClassName = className . 'Test'
+    let identifiers = split(testClassName, '\\')
+    let testClassNoNamespace = get(identifiers, -1)
     let testFileTempPath = fnamemodify(self.testDir . '/' . a:filePath, '%')
     let testFileDir = fnamemodify(testFileTempPath, ':p:h')
-    echom testFileDir
-    echom testFileTempPath
-    let testFilePath = fnamemodify(testFileDir . '/' . testClassName . '.php', '%')
+    let testFilePath = fnamemodify(testFileDir . '/' . testClassNoNamespace . '.php', '%')
     if !isdirectory(testFileDir)
         call mkdir(testFileDir, 'p')
     endif
@@ -91,16 +91,6 @@ function! s:PhpUnitSkel.getClass(filePath)
     return className
 endfunction
 
-
-" FUNCTION: PhpUnitSkel.validCwd
-" check if current working dir contains tests directory
-function! s:PhpUnitSkel.validCwd()
-"    let currentDir = fnamemodify(getcwd() . '/' . self.testDir, '%')
-"    if !is_directory(currentDir)
-"        throw 'Current working directory ' . getcwd() . ' does not have directory ' . self.testDir
-    "endif
-endfunction
-
 "===========================================
 
 " FUNCTION: PhpUnitSkelGenOutput() {{{1
@@ -109,7 +99,7 @@ endfunction
 function! PhpUnitSkelGenOutput(content, filePath)
     echo a:content
     if filereadable(a:filePath)
-        execute 'sp ' . a:filePath
+        execute 'vsp' a:filePath
     endif
 endfunction
 
@@ -123,7 +113,6 @@ endfunction
 " if current file is a test class a class file will be created
 function! PhpGenSkel(filePath)
     try
-        call s:PhpUnitSkel.validCwd()
         let realFilePath = !empty(a:filePath) ? a:filePath : expand('%')
         let is_test = fnamemodify(realFilePath, '%:t') =~ 'Test\.'
         if is_test
@@ -137,7 +126,7 @@ function! PhpGenSkel(filePath)
 endfunction
 
 
-command! -nargs=? -complete=file PhpGenSkel call PhpGenSkel(<args>)
+command! -nargs=? -complete=file PhpGenSkel call PhpGenSkel(<q-args>)
 
 if !exists('g:phpunit_skelgen_key_map') || !g:phpunit_skelgen_key_map
     autocmd FileType php nnoremap <Leader>gs :PhpGenSkel<Enter>
