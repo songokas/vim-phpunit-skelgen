@@ -16,10 +16,16 @@ if !exists('g:phpunit_testroot')
     let g:phpunit_testroot = 'tests'
 endif
 
-" params to append
+" params to append to phpunit-skelgen binary
 if !exists('g:phpunit_skelgen_params')
     let g:phpunit_skelgen_params = ''
 endif
+
+" php unit test suffix
+if !exists('g:phpunit_test_class_suffix')
+    let g:phpunit_test_class_suffix = 'Test'
+endif
+
 
 
 "CLASS: PhpUnitSkel
@@ -30,6 +36,7 @@ let s:PhpUnitSkel.bin = g:phpunit_skelgen
 let s:PhpUnitSkel.testDir = g:phpunit_testroot
 let s:PhpUnitSkel.params = g:phpunit_skelgen_params
 let s:PhpUnitSkel.classParser = fnamemodify(expand('<sfile>:h:h') . '/bin/classParser.php', '%')
+let s:PhpUnitSkel.testClassSuffix = g:phpunit_test_class_suffix
 
 " FUNCTION: PhpUnitSkel.run()   {{{1
 " run the executable
@@ -47,7 +54,7 @@ endfunction
 " generate test class for current file
 function! s:PhpUnitSkel.generateTest(filePath)
     let className = self.getClass(a:filePath)
-    let testClassName = className . 'Test'
+    let testClassName = className . self.testClassSuffix
     let identifiers = split(testClassName, '\\')
     let testClassNoNamespace = get(identifiers, -1)
     let testFileTempPath = fnamemodify(self.testDir . '/' . a:filePath, '%')
@@ -66,10 +73,11 @@ endfunction
 " generate class from current test file
 function! s:PhpUnitSkel.generateClass(testFilePath)
     let testClassName = self.getClass(a:testFilePath)
-    let className = matchstr(testClassName,  '\zs[^\s]\+\zeTest$')
+    let className = matchstr(testClassName,  '\zs.\+\ze' . self.testClassSuffix . '$')
     if empty(className)
-        throw 'Not a test file ' . testClassName . '. Test file ends with Test.php'
-    let filePath = matchstr(a:testFilePath, self.testDir . '\zs.\+')
+        throw 'Not a test file ' . testClassName . '. ' . self.testClassSuffix . ' file ends with Test.php'
+    endif
+    let filePath = matchstr(a:testFilePath, self.testDir . '/\zs.\+')
     let fileDir = fnamemodify(filePath, ':p:h')
     if !isdirectory(fileDir)
         call mkdir(fileDir, 'p')
